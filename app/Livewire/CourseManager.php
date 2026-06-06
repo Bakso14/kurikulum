@@ -4,11 +4,19 @@ namespace App\Livewire;
 
 use App\Models\Course;
 use Livewire\Component;
+use Livewire\WithFileUploads; // 1. Tambahkan ini
+use Maatwebsite\Excel\Facades\Excel;
+use App\Imports\CourseImport;
 
 class CourseManager extends Component
 {
-    // Form State untuk Tambah Mata Kuliah Baru
+    use WithFileUploads; // 2. Gunakan trait ini
+
+    // Form State Tambah Manual
     public $code, $name, $sks = 2, $category = 'Engineering Topics', $semester = 0;
+
+    // State untuk file excel
+    public $excelFile;
 
     protected $rules = [
         'code' => 'required|unique:courses,code',
@@ -18,7 +26,6 @@ class CourseManager extends Component
         'semester' => 'required|integer|between:0,8',
     ];
 
-    // Fungsi untuk menambah item baru
     public function addCourse()
     {
         $this->validate();
@@ -32,18 +39,31 @@ class CourseManager extends Component
             'sort_order' => Course::where('semester', $this->semester)->max('sort_order') + 1
         ]);
 
-        // Reset Form
         $this->reset(['code', 'name', 'sks', 'category', 'semester']);
-        
         session()->flash('message', 'Mata kuliah berhasil ditambahkan!');
     }
 
-    // Fungsi vital untuk menangani Drag and Drop perubahan urutan & semester
+    // 3. FUNGSI BARU: Untuk memproses upload Excel
+    public function importExcel()
+    {
+        $this->validate([
+            'excelFile' => 'required|mimes:xlsx,xls|max:10240', // Maksimal 10MB
+        ]);
+
+        try {
+            Excel::import(new CourseImport, $this->excelFile->getRealPath());
+            
+            $this->reset('excelFile');
+            session()->flash('message', 'Data Excel berhasil diimport ke Database!');
+        } catch (\Exception $e) {
+            session()->flash('error', 'Gagal mengimport file. Pastikan format header template sudah sesuai.');
+        }
+    }
+
     public function updateCourseOrder($groups)
     {
         foreach ($groups as $group) {
-            $semesterId = $group['value']; // Ini mewakili nomor semester (0-8)
-            
+            $semesterId = $group['value'];
             foreach ($group['items'] as $item) {
                 Course::where('id', $item['value'])->update([
                     'semester' => $semesterId,
@@ -55,12 +75,11 @@ class CourseManager extends Component
 
     public function render()
     {
-        // Ambil semua data matkul yang sudah diurutkan
         $courses = Course::orderBy('sort_order')->get();
 
         return view('livewire.course-manager', [
             'courses' => $courses
-        ])->layout('layouts.app'); // Menggunakan master layout
+        ])->layout('layouts.app');
     }
 
     // Fungsi Baru untuk Sinkronisasi Drag & Drop Native
@@ -75,5 +94,22 @@ class CourseManager extends Component
         
         // Refresh data tanpa reload halaman
         $this->dispatch('smooth-refresh');
+    }
+    
+    // Fungsi untuk menghapus satu mata kuliah tertentu
+    public function deleteCourse($id)
+    {
+        \App\Models\Course::destroy($id);
+        
+        // Opsional: berikan pesan sukses
+        session()->flash('message', 'Mata kuliah berhasil dihapus.');
+    }
+
+    // Fungsi untuk menghapus seluruh data mata kuliah (Reset)
+    public function deleteAllCourses()
+    {
+        \App\Models\Course::truncate(); // Menghapus semua data di tabel
+        
+        session()->flash('message', 'Semua data mata kuliah telah dibersihkan.');
     }
 }

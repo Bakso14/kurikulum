@@ -73,6 +73,18 @@
                     </button>
                 </form>
             </div>
+
+            <div class="border-t pt-4">
+                <button type="button" 
+                        onclick="confirm('Apakah Anda yakin ingin menghapus SELURUH data mata kuliah?') || event.stopImmediatePropagation()"
+                        wire:click="deleteAllCourses" 
+                        class="w-full bg-red-100 hover:bg-red-200 text-red-700 font-semibold py-2 rounded border border-red-300 transition text-xs text-center shadow-sm flex items-center justify-center space-x-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-16v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Kosongkan / Reset Semua Data</span>
+                </button>
+            </div>
         </div>
 
         <div class="lg:col-span-3 grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -97,6 +109,7 @@
                                 animation: 150,
                                 ghostClass: 'opacity-30',
                                 dragClass: 'shadow-2xl',
+                                filter: '.no-drag', /* Mencegah tombol hapus memicu drag */
                                 onEnd: function (evt) {
                                     let serializedItems = [];
                                     document.querySelectorAll('.native-sortable-list').forEach(listContainer => {
@@ -117,24 +130,34 @@
                         @foreach($courses->where('semester', $sem) as $course)
                             <div data-course-id="{{ $course->id }}" 
                                  @class([
-                                     'p-3 bg-white rounded-md shadow-sm border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition duration-150',
+                                     'p-3 bg-white rounded-md shadow-sm border-l-4 cursor-grab active:cursor-grabbing hover:shadow-md transition duration-150 relative group',
                                      'border-green-500' => $course->category == 'General Education',
                                      'border-orange-500' => $course->category == 'Basic Science & Math',
                                      'border-blue-500' => $course->category == 'Engineering Topics',
                                  ])>
                                  
-                                <div class="flex justify-between items-start">
+                                <div class="flex justify-between items-start pr-6">
                                     <div>
                                         <span class="text-[10px] uppercase tracking-wider text-gray-400 block font-mono">{{ $course->code }}</span>
                                         <h4 class="text-sm font-bold text-gray-800 leading-tight">{{ $course->name }}</h4>
                                     </div>
-                                    <span class="text-xs font-extrabold px-2 py-0.5 bg-gray-200 text-gray-700 rounded">
+                                    <span class="text-xs font-extrabold px-2 py-0.5 bg-gray-200 text-gray-700 rounded whitespace-nowrap">
                                         {{ $course->sks }} SKS
                                     </span>
                                 </div>
                                 <div class="mt-2 text-[11px] text-gray-500 italic">
                                     Category: {{ $course->category }}
                                 </div>
+
+                                <button type="button"
+                                        onclick="confirm('Hapus mata kuliah ini?') || event.stopImmediatePropagation()"
+                                        wire:click="deleteCourse({{ $course->id }})"
+                                        class="no-drag absolute top-2 right-2 text-gray-400 hover:text-red-500 rounded p-0.5 md:opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                                        title="Hapus Mata Kuliah">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
                             </div>
                         @endforeach
 
